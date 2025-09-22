@@ -503,6 +503,78 @@ function onSingleClickWMS(evt) {
 map.on('singleclick', onSingleClickFeatures);
 map.on('singleclick', onSingleClickWMS);
 
+// ==== Tap-friendly Select (drop-in, no rewrite) ====
+// 1) kondisi single click (fallback aman)
+var _singleClickCond = (ol.events && ol.events.condition && ol.events.condition.singleClick) || undefined;
+
+// 2) bikin select interaction dengan hitTolerance besar di HP
+var tapSelect = new ol.interaction.Select({
+  condition: _singleClickCond,                    // default single click
+  hitTolerance: hasTouchScreen ? 16 : 4,          // > cukup lebar untuk jari
+  layers: function (l) {                          // hanya vector layer interaktif
+    return (l instanceof ol.layer.Vector || l instanceof ol.layer.VectorImage) &&
+           (l.get("interactive") !== false);
+  },
+  style: null                                     // biar style asli tidak diubah
+});
+map.addInteraction(tapSelect);
+
+// 3) kalau sudah kena vector, jangan panggil WMS
+window.__lastVectorHit = false;
+
+// 4) saat ada seleksi, bangun popup pakai util kamu yang sudah ada
+tapSelect.on('select', function (e) {
+  window.__lastVectorHit = false;
+
+  // tidak ada yang terpilih -> tutup popup
+  if (!e.selected.length) {
+    container.style.display = 'none';
+    return;
+  }
+
+  var pixel = map.getEventPixel(e.mapBrowserEvent.originalEvent);
+  var coord = e.mapBrowserEvent.coordinate;
+
+  var popupText = '<ul>';
+  var found = false;
+
+  // gunakan forEachFeatureAtPixel untuk dapat (feature, layer) yang benar,
+  // agar createPopupField() bisa akses fieldAliases/Labels dari layer
+  map.forEachFeatureAtPixel(pixel, function (feature, layer) {
+    if (layer && feature instanceof ol.Feature &&
+       (layer.get("interactive") || layer.get("interactive") === undefined)) {
+
+      var keys = feature.getKeys();
+      popupText += '<li><table>';
+      popupText += '<a><b>' + (layer.get('popuplayertitle') || layer.get('title') || 'Info') + '</b></a>';
+      popupText += createPopupField(feature, keys, layer);  // <<< util kamu
+      popupText += '</table></li>';
+      found = true;
+
+      // highlight ringan via featureOverlay kamu
+      try {
+        featureOverlay.getSource().clear();
+        featureOverlay.getSource().addFeature(feature);
+      } catch(_) {}
+      return true; // cukup satu
+    }
+  }, {
+    // kalau OL kamu mendukung options, bagus; kalau tidak, fungsi ini tetap jalan
+    hitTolerance: hasTouchScreen ? 16 : 4,
+    layerFilter: function (l) { return !l || l.get("interactive") !== false; }
+  });
+
+  if (found) {
+    popupText += '</ul>';
+    content.innerHTML = popupText;
+    container.style.display = 'block';
+    overlayPopup.setPosition(coord);
+    window.__lastVectorHit = true;
+  } else {
+    container.style.display = 'none';
+  }
+});
+
 //get container
 var topLeftContainerDiv = document.getElementById('top-left-container')
 var bottomLeftContainerDiv = document.getElementById('bottom-left-container')
