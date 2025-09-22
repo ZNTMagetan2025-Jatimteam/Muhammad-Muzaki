@@ -15,6 +15,15 @@ map.getView().fit([12380303.848863, -872308.820723, 12426751.219873, -848550.976
     var hasTouchScreen = map.getViewport().classList.contains('ol-touch');
     var isSmallScreen = window.innerWidth < 650;
 
+// ==== Mobile tuning ====
+var HIT = hasTouchScreen ? 14 : 4;
+
+// Di HP jangan pakai hover highlight, biar tap lebih responsif
+if (hasTouchScreen) {
+  doHover = false;
+  doHighlight = false;
+}
+
 ////controls container
 
     //top left container
@@ -56,8 +65,6 @@ map.getView().fit([12380303.848863, -872308.820723, 12426751.219873, -848550.976
         })(),
     });
     map.addControl(bottomRightContainer)
-
-    
 
 //popup
 var container = document.getElementById('popup');
@@ -1181,7 +1188,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (attributionControl) {
         bottomRightContainerDiv.appendChild(attributionControl);
     }
-        /* === MATIKAN LAYER DATA SEBELUM DIKLIK DI LEGENDA (kecuali basemap) === */
+
+    /* === MATIKAN LAYER DATA SEBELUM DIKLIK DI LEGENDA (kecuali basemap) === */
 (function turnOffLayersForMobile() {
   // deteksi & matikan semua layer non-basemap di layersList
   function offIfNotBase(layer) {
