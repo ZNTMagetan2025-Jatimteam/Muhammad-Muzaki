@@ -24,6 +24,32 @@ if (hasTouchScreen) {
   doHighlight = false;
 }
 
+/* ==== Drop-in: Perbesar hitTolerance secara global ====
+   Tidak mengubah handler yang ada—cukup membungkus forEachFeatureAtPixel.
+   Aman untuk OL lama: kalau options nggak didukung, dia otomatis fallback. */
+(function widenHitTolerance(m, H) {
+  if (!m || typeof m.forEachFeatureAtPixel !== 'function') return;
+
+  // simpan fungsi asli
+  var _orig = m.forEachFeatureAtPixel.bind(m);
+
+  // ganti dengan wrapper
+  m.forEachFeatureAtPixel = function (pixel, callback, options) {
+    // pastikan options ada dan sisipkan hitTolerance
+    options = options || {};
+    if (typeof options.hitTolerance === 'undefined') {
+      options.hitTolerance = H;
+    }
+    try {
+      // coba panggil dengan options (OL modern)
+      return _orig(pixel, callback, options);
+    } catch (e) {
+      // fallback: panggil tanpa options (kalau OL sangat lama)
+      return _orig(pixel, callback);
+    }
+  };
+})(map, HIT);
+
 ////controls container
 
     //top left container
